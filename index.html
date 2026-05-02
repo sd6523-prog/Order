@@ -272,7 +272,7 @@
             const payload = {
                 contents: [{
                     parts: [
-                        { text: "提取採購單資料並回傳 JSON：{\"order_no\":\"\",\"order_date\":\"\",\"delivery_date\":\"\",\"purchase_unit\":\"\",\"items\":[{\"name\":\"\",\"qty\":0,\"unit\":\"\"}]}\n訂貨日期為檔案左上角列印日期；到貨日期為檔案右上角的到貨日期。請直接回傳純 JSON，不要附加說明文字。" },
+                        { text: "請辨識圖片中的表格，並依照以下邏輯處理自動換行：水平對齊原則：每一筆資料的基準請以右側有「數量」與「單位」的那一行為準。向上合併：若某一行文字的右側「數量」與「單位」欄位皆為空白，且其上方有完整資料，請將此行文字併入上一筆資料的「商品名稱」尾端。括號完整性：若規格內容被括號切斷跨行（例如 (3K/包) 或 Q)），請重新組合成完整字串。提取採購單資料並回傳 JSON：{\"order_no\":\"\",\"order_date\":\"\",\"delivery_date\":\"\",\"purchase_unit\":\"\",\"items\":[{\"name\":\"\",\"qty\":0,\"unit\":\"\"}]}\n訂貨日期為檔案左上角列印日期；到貨日期為檔案右上角的到貨日期。請直接回傳純 JSON，不要附加說明文字." },
                         { inlineData: { mimeType: "image/jpeg", data: base64 } }
                     ]
                 }],
@@ -329,21 +329,64 @@
             return `${year}/${month}/${day}`;
         }
 
+        function normalizeAILines(items) {
+            if (!Array.isArray(items)) return [];
+
+            const rows = items.map(item => ({
+                name: String(item.name || "").replace(/\s+/g, ' ').trim(),
+                qty: item.qty === null || item.qty === undefined ? "" : item.qty,
+                unit: String(item.unit || "").replace(/\s+/g, ' ').trim()
+            }));
+
+            const merged = [];
+            for (const row of rows) {
+                const qtyEmpty = row.qty === "" || row.qty === null || row.qty === undefined;
+                const unitEmpty = row.unit === "" || row.unit === null || row.unit === undefined;
+
+                if (qtyEmpty && unitEmpty && row.name) {
+                    if (merged.length > 0) {
+                        merged[merged.length - 1].name = `${merged[merged.length - 1].name} ${row.name}`.trim();
+                        continue;
+                    }
+                }
+                if (row.name || !qtyEmpty || !unitEmpty) {
+                    merged.push({
+                        name: repairParentheses(row.name),
+                        qty: row.qty,
+                        unit: row.unit
+                    });
+                }
+            }
+            return merged;
+        }
+
+        function repairParentheses(text) {
+            if (!text) return "";
+            let normalized = text.replace(/（/g, '(').replace(/）/g, ')').replace(/\s+/g, ' ').trim();
+            const openCount = (normalized.match(/\(/g) || []).length;
+            const closeCount = (normalized.match(/\)/g) || []).length;
+            if (openCount > closeCount) normalized += ')';
+            if (closeCount > openCount) normalized = '(' + normalized;
+            return normalized;
+        }
+
         function processAILogic(ai) {
+            const rawItems = normalizeAILines(ai.items || []);
             const isFG10 = (ai.purchase_unit || "").includes("10") || (ai.purchase_unit || "").includes("食材");
             const cid = isFG10 ? "C310043" : "C310042";
             const cname = isFG10 ? "玉美生技股份有限公司(食材)" : "玉美生技股份有限公司(供食工場)";
             const orderDate = toAD(ai.order_date || ai.print_date || ai.purchase_date || ai.printed_date || "");
             const deliveryDate = toAD(ai.delivery_date || ai.deliver_date || ai.ship_date || "");
 
-            return ai.items.map(it => {
+            return rawItems.map(it => {
+                const qtyValue = Number(String(it.qty).replace(/[^ -\d.\-]/g, '')) || 0;
                 let res = {
                     '_status': 'failed', '客戶編號': cid, '客戶名稱': cname,
                     '訂貨日期': orderDate,
                     '交貨日期': deliveryDate,
                     '訂單編號': ai.order_no || "",
                     '品項代號': 'NULL', '客戶品項名稱': it.name || "",
-                    '品項名稱': '未比對成功', '規格單位代號': '', '規格單位': it.unit || "", '數量': it.qty || 0
+                    '品項名稱': '未比對成功', '規格單位代號': '', '規格單位': it.unit || "", '數量': qtyValue
                 };
                 if (fuse && it.name) {
                     const found = fuse.search(it.name);
