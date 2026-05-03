@@ -387,7 +387,8 @@
                     '交貨日期': deliveryDate,
                     '訂單編號': ai.order_no || "",
                     '品項代號': 'NULL',
-                    '品項名稱': it.name || "",
+                    '客戶品項名稱': it.name || "",
+                    '品項名稱': '未比對成功',
                     '規格單位代號': '',
                     '規格單位': it.unit || "",
                     '數量': Number(String(it.qty).replace(/[^\d.\-]/g, '')) || 0
