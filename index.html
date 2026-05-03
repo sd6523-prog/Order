@@ -105,6 +105,7 @@
                                     <th class="p-4 font-bold text-slate-500 border-b">交貨日期</th>
                                     <th class="p-4 font-bold text-slate-500 border-b">訂單編號</th>
                                     <th class="p-4 font-bold text-slate-500 border-b">品項代號</th>
+                                    <th class="p-4 font-bold text-slate-500 border-b">客戶品項名稱</th>
                                     <th class="p-4 font-bold text-blue-700 border-b">品項名稱</th>
                                     <th class="p-4 font-bold text-slate-500 border-b">規格單位代號</th>
                                     <th class="p-4 font-bold text-slate-500 border-b">規格單位</th>
@@ -418,6 +419,7 @@
                     <td class="p-4">${r['交貨日期']}</td>
                     <td class="p-4 font-mono text-[11px]">${r['訂單編號']}</td>
                     <td class="p-4 font-bold text-blue-600">${r['品項代號']}</td>
+                    <td class="p-4">${r['客戶品項名稱']}</td>
                     <td class="p-4 font-bold text-slate-800">${r['品項名稱']}</td>
                     <td class="p-4">${r['規格單位代號'] || ''}</td>
                     <td class="p-4">${r['規格單位']}</td>
@@ -438,6 +440,7 @@
                 '交貨日期': rest['交貨日期'] || '',
                 '訂單編號': rest['訂單編號'] || '',
                 '品項代號': rest['品項代號'] || '',
+                '客戶品項名稱': rest['客戶品項名稱'] || '',
                 '品項名稱': rest['品項名稱'] || '',
                 '規格單位代號': rest['規格單位代號'] || '',
                 '規格單位': rest['規格單位'] || '',
